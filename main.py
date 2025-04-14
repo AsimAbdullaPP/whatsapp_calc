@@ -1,39 +1,41 @@
-import re
+import logging
 from flask import Flask, request, jsonify
 from twilio.twiml.messaging_response import MessagingResponse
-from werkzeug.urls import unquote  # Updated import
+from werkzeug.urls import unquote
 
 app = Flask(__name__)
 
-# Health check route
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+
 @app.route('/health', methods=['GET'])
 def health_check():
+    app.logger.info("Health check route accessed")
     return "OK", 200
 
-# Home route
 @app.route("/", methods=["GET"])
 def home():
+    app.logger.info("Home route accessed")
     return "WhatsApp Calc API is running!"
 
-# Command handling route
 @app.route("/command", methods=["POST"])
 def handle_command():
     data = request.get_json()
+    app.logger.debug(f"Received data: {data}")
     command = data.get("command", "")
     messages = data.get("messages", [])
     result = handle_settle_command(command, messages)
+    app.logger.debug(f"Command result: {result}")
     return jsonify({"result": result})
 
 def parse_command(command):
-    """Extract operation and optional start marker."""
     pattern = r'^/settle_(\w+)(?:\s+-start\s+\'"[\'"])?$'
     match = re.match(pattern, command.strip())
     if match:
-        return match.group(1), match.group(2)  # (operation, start_marker)
+        return match.group(1), match.group(2)
     return None, None
 
 def extract_numbers(messages):
-    """Extract all numbers from a list of message strings."""
     numbers = []
     for msg in messages:
         numbers += list(map(float, re.findall(r'\d+\.?\d*', msg)))
@@ -78,15 +80,13 @@ def handle_settle_command(command, all_messages):
     numbers = extract_numbers(selected_messages)
     return calculate_result(numbers, operation)
 
-# WhatsApp reply route
 @app.route("/whatsapp", methods=["POST"])
 def whatsapp_reply():
     incoming_msg = request.form.get("Body", "").strip()
-    # Simulated past messages list (you'll automate this later)
-    messages = [
-        "start", "100", "250", "another message", "300", "12", "34"
-    ]
+    app.logger.debug(f"Incoming message: {incoming_msg}")
+    messages = ["start", "100", "250", "another message", "300", "12", "34"]
     result = handle_settle_command(incoming_msg, messages)
+    app.logger.debug(f"Reply result: {result}")
     resp = MessagingResponse()
     resp.message(result)
     return str(resp)
