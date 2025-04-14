@@ -1,12 +1,20 @@
 import re
 from flask import Flask, request, jsonify
+from twilio.twiml.messaging_response import MessagingResponse
 
 app = Flask(__name__)
 
+# Health check route
+@app.route('/health', methods=['GET'])
+def health_check():
+    return "OK", 200
+
+# Existing home route
 @app.route("/", methods=["GET"])
 def home():
     return "WhatsApp Calc API is running!"
 
+# Command handling route
 @app.route("/command", methods=["POST"])
 def handle_command():
     data = request.get_json()
@@ -76,8 +84,7 @@ def handle_settle_command(command, all_messages):
 
     return calculate_result(numbers, operation)
 
-from twilio.twiml.messaging_response import MessagingResponse
-
+# WhatsApp reply route
 @app.route("/whatsapp", methods=["POST"])
 def whatsapp_reply():
     incoming_msg = request.form.get("Body", "").strip()
@@ -92,3 +99,6 @@ def whatsapp_reply():
     resp = MessagingResponse()
     resp.message(result)
     return str(resp)
+
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=5000)
