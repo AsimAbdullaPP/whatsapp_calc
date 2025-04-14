@@ -1,4 +1,20 @@
 import re
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+@app.route("/", methods=["GET"])
+def home():
+    return "WhatsApp Calc API is running!"
+
+@app.route("/command", methods=["POST"])
+def handle_command():
+    data = request.get_json()
+    command = data.get("command", "")
+    messages = data.get("messages", [])
+
+    result = handle_settle_command(command, messages)
+    return jsonify({"result": result})
 
 def parse_command(command):
     """Extract operation and optional start marker."""
