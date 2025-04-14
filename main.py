@@ -1,0 +1,61 @@
+import re
+
+def parse_command(command):
+    """Extract operation and optional start marker."""
+    pattern = r'^/settle_(\w+)(?:\s+-start\s+[\'"](.+?)[\'"])?$'
+    match = re.match(pattern, command.strip())
+    if match:
+        return match.group(1), match.group(2)  # (operation, start_marker)
+    return None, None
+
+def extract_numbers(messages):
+    """Extract all numbers from a list of message strings."""
+    numbers = []
+    for msg in messages:
+        numbers += list(map(float, re.findall(r'\d+\.?\d*', msg)))
+    return numbers
+
+def calculate_result(numbers, operation):
+    if not numbers:
+        return "No numbers found."
+
+    if operation == 'a':
+        result = sum(numbers)
+        expr = ' + '.join(map(str, numbers))
+    elif operation == 's':
+        result = numbers[0] - sum(numbers[1:]) if len(numbers) > 1 else numbers[0]
+        expr = ' - '.join(map(str, numbers))
+    elif operation == 'm':
+        result = 1
+        for n in numbers:
+            result *= n
+        expr = ' * '.join(map(str, numbers))
+    elif operation == 'd':
+        result = numbers[0]
+        for n in numbers[1:]:
+            if n == 0:
+                return "Division by zero error."
+            result /= n
+        expr = ' / '.join(map(str, numbers))
+    else:
+        return "Invalid operation."
+
+    return f"{expr} = {result}"
+
+def handle_settle_command(command, all_messages):
+    operation, start_marker = parse_command(command)
+
+    if not operation:
+        return "Invalid command format."
+
+    start_index = 0
+    if start_marker:
+        for i, msg in enumerate(all_messages):
+            if start_marker in msg:
+                start_index = i + 1
+                break
+
+    selected_messages = all_messages[start_index:]
+    numbers = extract_numbers(selected_messages)
+
+    return calculate_result(numbers, operation)
