@@ -75,3 +75,20 @@ def handle_settle_command(command, all_messages):
     numbers = extract_numbers(selected_messages)
 
     return calculate_result(numbers, operation)
+
+from twilio.twiml.messaging_response import MessagingResponse
+
+@app.route("/whatsapp", methods=["POST"])
+def whatsapp_reply():
+    incoming_msg = request.form.get("Body", "").strip()
+
+    # Simulated past messages list (you'll automate this later)
+    messages = [
+        "start", "100", "250", "another message", "300", "12", "34"
+    ]
+
+    result = handle_settle_command(incoming_msg, messages)
+
+    resp = MessagingResponse()
+    resp.message(result)
+    return str(resp)
