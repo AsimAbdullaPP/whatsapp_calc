@@ -1,6 +1,7 @@
 import re
 from flask import Flask, request, jsonify
 from twilio.twiml.messaging_response import MessagingResponse
+from werkzeug.urls import unquote  # Updated import
 
 app = Flask(__name__)
 
@@ -9,7 +10,7 @@ app = Flask(__name__)
 def health_check():
     return "OK", 200
 
-# Existing home route
+# Home route
 @app.route("/", methods=["GET"])
 def home():
     return "WhatsApp Calc API is running!"
@@ -20,13 +21,12 @@ def handle_command():
     data = request.get_json()
     command = data.get("command", "")
     messages = data.get("messages", [])
-
     result = handle_settle_command(command, messages)
     return jsonify({"result": result})
 
 def parse_command(command):
     """Extract operation and optional start marker."""
-    pattern = r'^/settle_(\w+)(?:\s+-start\s+[\'"](.+?)[\'"])?$'
+    pattern = r'^/settle_(\w+)(?:\s+-start\s+\'"[\'"])?$'
     match = re.match(pattern, command.strip())
     if match:
         return match.group(1), match.group(2)  # (operation, start_marker)
@@ -42,7 +42,6 @@ def extract_numbers(messages):
 def calculate_result(numbers, operation):
     if not numbers:
         return "No numbers found."
-
     if operation == 'a':
         result = sum(numbers)
         expr = ' + '.join(map(str, numbers))
@@ -63,39 +62,31 @@ def calculate_result(numbers, operation):
         expr = ' / '.join(map(str, numbers))
     else:
         return "Invalid operation."
-
     return f"{expr} = {result}"
 
 def handle_settle_command(command, all_messages):
     operation, start_marker = parse_command(command)
-
     if not operation:
         return "Invalid command format."
-
     start_index = 0
     if start_marker:
         for i, msg in enumerate(all_messages):
             if start_marker in msg:
                 start_index = i + 1
                 break
-
     selected_messages = all_messages[start_index:]
     numbers = extract_numbers(selected_messages)
-
     return calculate_result(numbers, operation)
 
 # WhatsApp reply route
 @app.route("/whatsapp", methods=["POST"])
 def whatsapp_reply():
     incoming_msg = request.form.get("Body", "").strip()
-
     # Simulated past messages list (you'll automate this later)
     messages = [
         "start", "100", "250", "another message", "300", "12", "34"
     ]
-
     result = handle_settle_command(incoming_msg, messages)
-
     resp = MessagingResponse()
     resp.message(result)
     return str(resp)
